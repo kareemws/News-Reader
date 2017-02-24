@@ -20,6 +20,11 @@ import java.util.concurrent.ExecutionException;
 public class MainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener{
 
     private ArrayList<Pair<String, String>> pairArrayList;
+    private ArrayAdapter viewAdapter;
+    private ListView headlinesListView;
+    private static DatabaseController storiesDatabase;
+    private boolean databaseStatus;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,14 +44,46 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId())
+        {
+            case R.id.refresh:
+                storiesDatabase.updateStories(updateStories());
+                prepare();
+                break;
+        }
         return super.onOptionsItemSelected(item);
     }
 
     private void prepare()
     {
+        storiesDatabase = new DatabaseController();
+        databaseStatus = checkDatabaseStatus();
+        storiesDatabase.createDatabase(this);
+        if(!databaseStatus)
+            storiesDatabase.updateStories(updateStories());
+        pairArrayList = storiesDatabase.getHeadlines();
+        ArrayList<String> stories = new ArrayList<>();
+        for(int i=0; i < pairArrayList.size(); i++)
+            stories.add(pairArrayList.get(i).first);
+        viewAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, stories);
+        headlinesListView = (ListView) findViewById(R.id.newsListView);
+        headlinesListView.setAdapter(viewAdapter);
+        headlinesListView.setOnItemClickListener(this);
+    }
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        Intent intent = new Intent(this, WebActivity.class);
+        intent.putExtra("Story URL", pairArrayList.get(position).second);
+        startActivity(intent);
+    }
+
+    private ArrayList<Pair<String, String>> updateStories()
+    {
         StoriesAPI storiesAPI = new StoriesAPI();
         ContentAPI contentAPI = new ContentAPI();
         JSONArray temp = null;
+        ArrayList<Pair<String, String>> pairArrayList = null;
         try {
             temp = storiesAPI.execute("https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty").get();
             pairArrayList = contentAPI.execute(temp).get();
@@ -55,20 +92,15 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
-        ArrayList<String> stories = new ArrayList<>();
-        for(int i=0; i < pairArrayList.size(); i++)
-            stories.add(pairArrayList.get(i).first);
 
-        ArrayAdapter arrayAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, stories);
-        ListView storiesListView = (ListView) findViewById(R.id.newsListView);
-        storiesListView.setAdapter(arrayAdapter);
-        storiesListView.setOnItemClickListener(this);
+        return pairArrayList;
     }
 
-    @Override
-    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        Intent intent = new Intent(this, WebActivity.class);
-        intent.putExtra("Story URL", pairArrayList.get(position).second);
-        startActivity(intent);
+    private boolean checkDatabaseStatus()
+    {
+        String[] databaseList = databaseList();
+        if(databaseList == null || databaseList.length == 0)
+            return false;
+        return true;
     }
 }

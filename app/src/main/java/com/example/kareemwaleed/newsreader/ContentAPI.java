@@ -26,8 +26,7 @@ public class ContentAPI extends AsyncTask<JSONArray, Void, ArrayList<Pair<String
         URL url = null;
         HttpURLConnection httpURLConnection = null;
         ArrayList<Pair<String, String>> pairArrayList = new ArrayList<>();
-        System.out.println("my test: " + jsonArray.length());
-        for(int i=0; i < 3; i++)
+        for(int i=0; i < 10; i++)
         {
             try {
                 url = new URL("https://hacker-news.firebaseio.com/v0/item/"+ jsonArray.get(i).toString() +".json?print=pretty");
@@ -47,6 +46,7 @@ public class ContentAPI extends AsyncTask<JSONArray, Void, ArrayList<Pair<String
                 JSONObject jsonObject = new JSONObject(result);
                 String title = jsonObject.getString("title");
                 String link = jsonObject.getString("url");
+                title = title.replace("'" , "''");
                 Pair<String, String> temp = new Pair<>(title, link);
                 pairArrayList.add(temp);
 
